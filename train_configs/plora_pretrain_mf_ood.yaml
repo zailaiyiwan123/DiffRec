@@ -1,0 +1,118 @@
+model:
+  arch: mini_gpt4rec_vx
+  model_type: pretrain_vicuna
+  rec_model: "MF"  # Specify collaborative filtering model type
+  freeze_rec: True         # Freeze CF main components
+  freeze_proj: False       # Train collaborative features to LLM projection MLP
+  freeze_lora: False       # Train LLM LoRA layers (collaborative weight injection QKVO)
+  freeze_bias: True        # Freeze bias layers
+  enable_score_head: True  # Enable rating prediction head (trainable)
+  max_txt_len: 256
+  proj_token_num: 1
+  proj_drop: 0
+  proj_mid_times: 10
+  end_sym: "###"
+  prompt_path: "prompts/tallrec_amazon.txt"
+  prompt_template: '{}'
+  llama_model: "/root/autodl-tmp/vicuna/weight"
+  user_num: -100
+  item_num: -100
+  ans_type: 'v2'
+  enable_rating_prediction: True  # Enable rating prediction
+  # Diffusion model configuration (re-enabled)
+  sd_base_dir: "/root/autodl-tmp/stable-diffusion-3.5-medium"
+  sd_lora_weight: null
+  # Diffusion model LoRA configuration (re-enabled)
+  diffusion_lora:
+    use_lora: True           # Enable diffusion model LoRA training
+    r: 16                    
+    alpha: 32               
+    target_modules: ["to_q", "to_k", "to_v"] 
+    dropout: 0.0
+  lora_config:
+    use_lora: True
+    r: 16
+    alpha: 32
+    target_modules: ["q_proj", "v_proj", "o_proj", "k_proj"]
+    dropout: 0.05
+  rec_config:
+    user_num: -100
+    item_num: -100
+    embedding_size: 256
+    pretrained_path: "/root/autodl-tmp/pretrained/mf/best_model.pth"
+  ckpt: "/data0/liuyuting/CoLLM/minigpt4/logs/stage2/20240606111_mf_amazon/checkpoint_best.pth"
+
+datasets:
+  amazon_ood:
+    path: /root/autodl-tmp/dataset/amazon/
+    data_type: default
+    build_info:
+      storage: /root/autodl-tmp/dataset/amazon/
+
+run:
+  task: rec_pretrain
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 3e-4  # Higher base learning rate for faster rating head convergence
+  min_lr: 1e-7   # Lower minimum learning rate
+  warmup_lr: 1e-7  # Lower warmup learning rate for smoother startup
+  diffusion_lr: 1e-4  # Diffusion model LoRA learning rate (re-enabled)
+  mode: 'v2' # Use v2 mode for multi-task training
+
+  weight_decay: 2e-4  # Increased regularization to prevent overfitting
+  max_epoch: 3  # Formal training: 3 epochs
+  iters_per_epoch: 8000   # Shorter iterations per epoch to accelerate single epoch
+  batch_size_train: 12  # Moderately reduced batch size for image generation module memory requirements
+  batch_size_eval: 6    # Corresponding validation batch size adjustment
+  num_workers: 4        # Moderately increased DataLoader concurrency for faster loading
+  warmup_steps: 200     # Shorter warmup steps for faster effective learning
+  weighted_sampler: False
+  
+  # Gradient stabilization parameters
+  max_grad_norm: 1.0    # Gradient clipping to prevent gradient explosion
+  accumulate_grad_batches: 1  # Disable gradient accumulation to reduce sync overhead
+  
+  # Multi-task loss weights and stabilization config (recommendation + image generation joint training)
+  rating_loss_weight: 1.0      # Rating prediction loss weight
+  image_loss_weight: 0.3       # Image generation loss weight (re-enabled)
+  
+  # Loss stabilization parameters
+  loss_smoothing: 0.0          # Disable label smoothing for larger effective gradients
+  rating_loss_scale: 1.0       # Rating loss scaling factor
+  use_focal_loss: False        # Whether to use focal loss (handle sample imbalance)
+  ema_decay: 0.999             # Exponential moving average decay for smooth training
+  
+  # Dual-GPU memory optimization configuration
+  gradient_checkpointing: True    # Continue using gradient checkpointing for memory control
+  dataloader_pin_memory: True    # Enable pin_memory for faster host to GPU transfer
+  use_dist_eval_sampler: False   # Disable distributed validation sampler to prevent hanging
+
+  seed: 42
+  output_dir: logs/test/
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False  # No pure evaluation, but allow validation during training
+  train_splits: ["train"]
+  valid_splits: ["valid"]  # Enable validation to show valid loss
+  test_splits: []  # Skip evaluation during training phase, enable later
+  
+  # Logging and validation parameter optimization
+  log_freq: 50               # More frequent logging for better convergence observation
+  eval_freq: 8000            # Evaluate once per epoch to reduce validation overhead
+  save_freq: 8000            # Synchronize to save once per epoch
+
+  # Dedicated learning rates
+  score_head_lr: 0.001       # Set larger learning rate specifically for rating head
+  
+  # Early stopping and learning rate scheduling optimization
+  early_stopping_patience: 10  # Early stopping mechanism to prevent overfitting
+  lr_decay_factor: 0.8         # Learning rate decay factor
+  lr_patience: 5               # Learning rate scheduling patience
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: False
+  # Dual-GPU memory management
+  gpu_memory_fraction: 0.85  # Use at most 85% memory per GPU
