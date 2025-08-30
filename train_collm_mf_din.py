@@ -389,9 +389,9 @@ def _create_clip_evaluator(device):
                 # Similarity range is approximately -1 to 1, map to 1-5 score
                 clip_score = max(1.0, min(5.0, (similarity + 1) / 2 * 4 + 1))  # Map to 1-5
                 
-                print(f"📊 CLIP evaluation - Original similarity: {similarity:.4f} -> Score: {clip_score:.4f}")
+                print(f"CLIP evaluation - Original similarity: {similarity:.4f} -> Score: {clip_score:.4f}")
                 
-                # 🎯 Directly return single CLIP score, no longer use four artificial dimensions
+                # Directly return single CLIP score, no longer use four artificial dimensions
                 return {
                     "clip_score": clip_score,       # Unified CLIP score
                     "similarity": similarity,       # Original similarity 
@@ -399,7 +399,7 @@ def _create_clip_evaluator(device):
                 }
                 
             except Exception as e:
-                print(f"⚠️ CLIP evaluation failed: {e}")
+                print(f" CLIP evaluation failed: {e}")
                 # Return default score
                 return {
                     "clip_score": 3.0,  # Neutral score
@@ -416,7 +416,7 @@ def init_image_generation_module(cfg, use_swanlab):
     1. Initialize diffusion model + LoRA
     2. Initialize compatible Qwen2.5-VL evaluator
     """
-    print("🔧 Initializing diffusion model (dual-card balanced configuration)...")
+    print("Initializing diffusion model (dual-card balanced configuration)...")
     
     # Set environment variable optimization
     import os
@@ -438,10 +438,10 @@ def init_image_generation_module(cfg, use_swanlab):
         allocated_mem = torch.cuda.memory_allocated(0)
         free_mem = total_mem - allocated_mem
         free_gb = free_mem / (1024**3)
-        print(f"🔍 Initial memory status: {free_gb:.1f}GB available / {total_mem/(1024**3):.1f}GB total")
+        print(f"Initial memory status: {free_gb:.1f}GB available / {total_mem/(1024**3):.1f}GB total")
         
         # Memory check for dual-card balanced environment
-        print(f"🔍 GPU0 memory status: {free_gb:.1f}GB available / {total_mem/(1024**3):.1f}GB total")
+        print(f"GPU0 memory status: {free_gb:.1f}GB available / {total_mem/(1024**3):.1f}GB total")
         
         # Check GPU1 memory
         if torch.cuda.device_count() > 1:
@@ -451,12 +451,12 @@ def init_image_generation_module(cfg, use_swanlab):
             gpu1_allocated = torch.cuda.memory_allocated(1)
             gpu1_free = gpu1_total - gpu1_allocated
             gpu1_free_gb = gpu1_free / (1024**3)
-            print(f"🔍 GPU1 memory status: {gpu1_free_gb:.1f}GB available / {gpu1_total/(1024**3):.1f}GB total")
+            print(f"GPU1 memory status: {gpu1_free_gb:.1f}GB available / {gpu1_total/(1024**3):.1f}GB total")
             torch.cuda.set_device(0)  # Switch back to GPU0
         
         # Aggressive cleanup when memory is insufficient
         if free_gb < 8:  
-            print(f"⚠️ GPU0 memory insufficient ({free_gb:.1f}GB < 8GB), performing aggressive cleanup...")
+            print(f"GPU0 memory insufficient ({free_gb:.1f}GB < 8GB), performing aggressive cleanup...")
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
             import gc
@@ -465,12 +465,12 @@ def init_image_generation_module(cfg, use_swanlab):
             allocated_mem_after = torch.cuda.memory_allocated(0)
             free_mem_after = total_mem - allocated_mem_after
             free_gb_after = free_mem_after / (1024**3)
-            print(f"🔍 GPU0 memory after cleanup: {free_gb_after:.1f}GB available")
+            print(f" GPU0 memory after cleanup: {free_gb_after:.1f}GB available")
             
             if free_gb_after < 6:
-                print(f"⚠️ Still insufficient after cleanup ({free_gb_after:.1f}GB < 6GB), but continue trying initialization")
+                print(f"Still insufficient after cleanup ({free_gb_after:.1f}GB < 6GB), but continue trying initialization")
         else:
-            print(f"✅ GPU0 memory sufficient ({free_gb:.1f}GB), starting image module initialization")
+            print(f"GPU0 memory sufficient ({free_gb:.1f}GB), starting image module initialization")
     
     # Get configuration path (switch to SD3.5, uniformly use sd_* naming)
     sd_base_dir = cfg.model_cfg.get('sd_base_dir', '/root/autodl-tmp/stable-diffusion-3.5-medium')
@@ -493,24 +493,24 @@ def init_image_generation_module(cfg, use_swanlab):
         )
 
         # Initialize trainer
-        print(f"🚀 Initializing SD3.5 diffusion model (base): {sd_base_dir}")
+        print(f"Initializing SD3.5 diffusion model (base): {sd_base_dir}")
         update_image_module(
             qwen_cfg=qwen_cfg,
             lora_rank=cfg.model_cfg.diffusion_lora.get('r', 16),
             lora_alpha=cfg.model_cfg.diffusion_lora.get('alpha', 32)
         )
         
-        print("✅ Diffusion model + LoRA initialization successful")
+        print(" Diffusion model + LoRA initialization successful")
         
         # 🔧 Use lightweight CLIP evaluator for image evaluation
         device = torch.device("cuda:1" if torch.cuda.device_count() > 1 else "cuda" if torch.cuda.is_available() else "cpu")
         
-        print("🔄 Initializing CLIP text-image similarity evaluator...")
+        print("Initializing CLIP text-image similarity evaluator...")
         
         try:
             # Create CLIP evaluator
             expert = _create_clip_evaluator(device)
-            print("✅ CLIP evaluator created successfully")
+            print("CLIP evaluator created successfully")
             
             # 🔧 Reinitialize image trainer, pass in CLIP evaluator
             update_image_module(
@@ -519,11 +519,11 @@ def init_image_generation_module(cfg, use_swanlab):
                 lora_alpha=cfg.model_cfg.diffusion_lora.get('alpha', 32),
                 expert=expert  # Pass in CLIP evaluator
             )
-            print("✅ Image trainer has been reinitialized with CLIP evaluator")
+            print("Image trainer has been reinitialized with CLIP evaluator")
             
         except Exception as e:
-            print(f"❌ CLIP evaluator loading failed: {e}")
-            print("⚠️ Falling back to smart evaluator...")
+            print(f" CLIP evaluator loading failed: {e}")
+            print("Falling back to smart evaluator...")
             expert = _create_smart_evaluator(device)
         
         # Ensure image loss is a tensor
@@ -539,13 +539,13 @@ def init_image_generation_module(cfg, use_swanlab):
                 # Otherwise return zero tensor
                 return torch.tensor(0.0, device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), requires_grad=True)
             except Exception as e:
-                print(f"⚠️ Image loss calculation failed: {e}")
+                print(f"Image loss calculation failed: {e}")
                 # Ensure returning differentiable zero tensor
                 return torch.tensor(0.0, device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), requires_grad=True)
         
         # Register loss function
         register_image_loss_fn(safe_image_loss_fn)
-        print("✅ Safe image loss function registered successfully")
+        print(" Safe image loss function registered successfully")
         
         # Log to SwanLab (using numbers and labels)
         if use_swanlab:
@@ -577,7 +577,7 @@ def init_image_generation_module(cfg, use_swanlab):
         # Quick verification of evaluator functionality
         try:
             if hasattr(expert, 'score_image'):
-                print("🧪 Quick verification of CLIP evaluator functionality...")
+                print("Quick verification of CLIP evaluator functionality...")
                 from PIL import Image
                 test_image = Image.new('RGB', (256, 256), color='blue')
                 test_scores = expert.score_image("Help me recommend video games", test_image)
@@ -585,19 +585,19 @@ def init_image_generation_module(cfg, use_swanlab):
                 if isinstance(test_scores, dict) and 'consistency' in test_scores:
                     clip_sim = test_scores.get('clip_similarity', 'N/A')
                     status = test_scores.get('status', 'unknown')
-                    print(f"✅ CLIP evaluator verification successful, CLIP similarity: {clip_sim}, status: {status}")
+                    print(f"CLIP evaluator verification successful, CLIP similarity: {clip_sim}, status: {status}")
                 else:
-                    print(f"⚠️ Evaluator return format anomaly: {test_scores}")
+                    print(f" Evaluator return format anomaly: {test_scores}")
             else:
-                print("ℹ️ Skip evaluator verification (score_image method not supported)")
+                print("Skip evaluator verification (score_image method not supported)")
         except Exception as e:
-            print(f"⚠️ Evaluator verification failed: {e}")
+            print(f" Evaluator verification failed: {e}")
         
-        print("🎯 Image generation module initialization completed")
+        print(" Image generation module initialization completed")
         
     except Exception as e:
-        print(f"❌ Image generation module initialization failed: {e}")
-        print("⚠️ Training will continue, but image generation functionality may be limited")
+        print(f"Image generation module initialization failed: {e}")
+        print("Training will continue, but image generation functionality may be limited")
         import traceback
         traceback.print_exc()
 
@@ -703,9 +703,9 @@ def main():
     if use_swanlab:
         swanlab.log({"user_num": int(user_num), "item_num": int(item_num)})
     
-    # 🎨 Enable image generation module - recommendation + image generation joint training
-    print("\n=== 🎨 Image generation module enabled, recommendation + image generation joint training ===")
-    print("🚀 Initializing image generation module...")
+    #  Enable image generation module - recommendation + image generation joint training
+    print("\n===  Image generation module enabled, recommendation + image generation joint training ===")
+    print(" Initializing image generation module...")
     init_image_generation_module(cfg, use_swanlab)  # Re-enable
     
     cfg.pretty_print()
