@@ -348,13 +348,13 @@ def load_test_data(test_data_path):
         for old_name, new_name in field_mapping.items():
             if old_name in test_data.columns and new_name not in test_data.columns:
                 test_data = test_data.rename(columns={old_name: new_name})
-                print(f"🔄 Field mapping: {old_name} -> {new_name}")
+                print(f" Field mapping: {old_name} -> {new_name}")
         
         # Check required fields
         required_fields = ['user_id', 'asin', 'rating', 'instruction']
         missing_fields = [field for field in required_fields if field not in test_data.columns]
         if missing_fields:
-            print(f"⚠️ Missing fields: {missing_fields}")
+            print(f" Missing fields: {missing_fields}")
             # If still missing fields, try to show available fields
             print(f"Available fields: {list(test_data.columns)}")
         
@@ -363,7 +363,7 @@ def load_test_data(test_data_path):
         print(f"Rating range: {test_data['rating'].min():.1f} - {test_data['rating'].max():.1f}")
         
         # Show instruction distribution
-        print(f"\n📋 Instruction distribution:")
+        print(f"\n Instruction distribution:")
         instruction_counts = test_data['instruction'].value_counts()
         for instruction, count in instruction_counts.items():
             print(f"  '{instruction}': {count:,} times")
@@ -376,14 +376,14 @@ def load_test_data(test_data_path):
 def load_checkpoint_and_model(checkpoint_path, cfg, disable_cf_model=False):
     """Load checkpoint and model"""
     cf_status = "without CF model" if disable_cf_model else "with CF model"
-    print(f"📂 Loading checkpoint: {checkpoint_path} ({cf_status})")
+    print(f" Loading checkpoint: {checkpoint_path} ({cf_status})")
     
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint file does not exist: {checkpoint_path}")
     
     # Load checkpoint
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
-    print(f"✅ Checkpoint loaded successfully, contains keys: {list(checkpoint.keys())}")
+    print(f" Checkpoint loaded successfully, contains keys: {list(checkpoint.keys())}")
     
     if 'epoch' in checkpoint:
         print(f"Training epoch: {checkpoint['epoch']}")
@@ -421,7 +421,7 @@ def load_checkpoint_and_model(checkpoint_path, cfg, disable_cf_model=False):
     
     # Ablation experiment: if disabling CF model, modify config
     if disable_cf_model:
-        print("🚫 Ablation experiment: disabling CF model components")
+        print(" Ablation experiment: disabling CF model components")
         # Backup original config
         original_cf_config = getattr(cfg.model_cfg, 'use_cf_model', True)
         # Set not to use CF model
@@ -430,7 +430,7 @@ def load_checkpoint_and_model(checkpoint_path, cfg, disable_cf_model=False):
             cfg.model_cfg.rec_config.use_pretrained_cf = False
         if hasattr(cfg.model_cfg.rec_config, 'enable_cf_component'):
             cfg.model_cfg.rec_config.enable_cf_component = False
-        print("✅ CF model components disabled")
+        print(" CF model components disabled")
     
     # Build model
     model = task.build_model(cfg)
@@ -456,12 +456,12 @@ def load_checkpoint_and_model(checkpoint_path, cfg, disable_cf_model=False):
                 print(f"   Filtered weight keys: {cf_related_keys[:5]}{'...' if len(cf_related_keys) > 5 else ''}")
             
             missing_keys, unexpected_keys = model.load_state_dict(filtered_state_dict, strict=False)
-            print(f"✅ Ablation model weights loaded successfully (missing: {len(missing_keys)}, unexpected: {len(unexpected_keys)})")
+            print(f" Ablation model weights loaded successfully (missing: {len(missing_keys)}, unexpected: {len(unexpected_keys)})")
         else:
         model.load_state_dict(checkpoint["model"], strict=False)
-            print("✅ Full model weights loaded successfully")
+            print(" Full model weights loaded successfully")
     except Exception as e:
-        print(f"⚠️ Model weight loading failed, trying loose loading: {e}")
+        print(f" Model weight loading failed, trying loose loading: {e}")
         missing_keys, unexpected_keys = model.load_state_dict(checkpoint["model"], strict=False)
         print(f"Missing keys: {len(missing_keys)}, Unexpected keys: {len(unexpected_keys)}")
     
@@ -471,7 +471,7 @@ def load_checkpoint_and_model(checkpoint_path, cfg, disable_cf_model=False):
     # Set model running mode (must be set, otherwise forward will error)
     mode = cfg.run_cfg.get('mode', 'v2')
     model.set_mode(mode)
-    print(f"✅ Model running mode set to: {mode}")
+    print(f"Model running mode set to: {mode}")
     
     return model, task, datasets
 
@@ -526,7 +526,7 @@ def evaluate_single_category(model, task, category_name, category_dataloader, de
             split_name=f"test_{category_name}"
         )
     
-    print(f"✅ {category_name} evaluation completed, results: {eval_results}")
+    print(f" {category_name} evaluation completed, results: {eval_results}")
     
     # Process evaluation results
     if eval_results is not None:
@@ -565,16 +565,16 @@ def run_single_model_evaluation(model, task, datasets, cfg, test_data_path, mode
     for data_name, split_dict in datasets.items():
         if 'test' in split_dict:
             test_dataset = split_dict['test']
-            print(f"✅ Using built-in test set structure: {data_name}/test")
+            print(f" Using built-in test set structure: {data_name}/test")
             break
     
     if test_dataset is None:
-        print("⚠️ Built-in test set not found, using first available dataset")
+        print(" Built-in test set not found, using first available dataset")
         # Use first available dataset
         for data_name, split_dict in datasets.items():
             for split_name, dataset in split_dict.items():
                 test_dataset = dataset
-                print(f"✅ Using dataset structure: {data_name}/{split_name}")
+                print(f" Using dataset structure: {data_name}/{split_name}")
                 break
             if test_dataset is not None:
                 break
@@ -590,10 +590,10 @@ def run_single_model_evaluation(model, task, datasets, cfg, test_data_path, mode
         'model_type': model_type
     }
     
-    print(f"\n🚀 Starting evaluation of {len(categorized_data)} categories...")
+    print(f"\n Starting evaluation of {len(categorized_data)} categories...")
     
     # First perform overall evaluation (if needed)
-    print(f"\n📊 Overall evaluation ({model_type} model)...")
+    print(f"\n Overall evaluation ({model_type} model)...")
     
     # Create dataloader for complete data
     from torch.utils.data import DataLoader
@@ -636,7 +636,7 @@ def run_single_model_evaluation(model, task, datasets, cfg, test_data_path, mode
     # Category-wise evaluation
     for category_name, category_data in categorized_data.items():
         print(f"\n{'='*50}")
-        print(f"🎯 Evaluating category: {category_name} ({model_type} model)")
+        print(f" Evaluating category: {category_name} ({model_type} model)")
         print(f"Data volume: {len(category_data)}")
         print(f"{'='*50}")
         
@@ -651,7 +651,7 @@ def run_single_model_evaluation(model, task, datasets, cfg, test_data_path, mode
             category_results[category_name] = category_result
             
             # Calculate statistics for this category
-            print(f"✅ {category_name} ({model_type} model) evaluation completed")
+            print(f" {category_name} ({model_type} model) evaluation completed")
             if isinstance(category_result, dict):
                 for key, value in category_result.items():
                     if isinstance(value, (int, float)):
@@ -660,7 +660,7 @@ def run_single_model_evaluation(model, task, datasets, cfg, test_data_path, mode
                         print(f"   {key}: {value}")
             
         except Exception as e:
-            print(f"❌ {category_name} ({model_type} model) evaluation failed: {e}")
+            print(f" {category_name} ({model_type} model) evaluation failed: {e}")
             category_results[category_name] = {"error": str(e)}
         
         print(f"{'='*50}")
@@ -679,7 +679,7 @@ def run_single_model_evaluation(model, task, datasets, cfg, test_data_path, mode
         }
     }
     
-    print(f"\n📊 {model_type} model evaluation summary:")
+    print(f"\n {model_type} model evaluation summary:")
     print(f"Total categories: {final_results['evaluation_summary']['total_categories_evaluated']}")
     print(f"Successful evaluations: {final_results['evaluation_summary']['successful_evaluations']}")
     print(f"Failed evaluations: {final_results['evaluation_summary']['failed_evaluations']}")
@@ -689,7 +689,7 @@ def run_single_model_evaluation(model, task, datasets, cfg, test_data_path, mode
 
 def run_ablation_evaluation(checkpoint_path, cfg, test_data_path, output_dir):
     """Run ablation experiment evaluation"""
-    print("\n🧪 Starting ablation experiment evaluation...")
+    print("\n Starting ablation experiment evaluation...")
     print("Will compare the following two model configurations:")
     print("1. Full model (with pretrained CF model)")
     print("2. Ablation model (without pretrained CF model)")
@@ -698,7 +698,7 @@ def run_ablation_evaluation(checkpoint_path, cfg, test_data_path, output_dir):
     
     # 1. Evaluate full model
     print("\n" + "="*80)
-    print("🔵 Phase 1: Evaluating full model (with pretrained CF model)")
+    print(" Phase 1: Evaluating full model (with pretrained CF model)")
     print("="*80)
     
     try:
@@ -710,19 +710,19 @@ def run_ablation_evaluation(checkpoint_path, cfg, test_data_path, output_dir):
             full_model, task, datasets, cfg, test_data_path, model_type="full"
         )
         all_results['full_model'] = full_results
-        print("✅ Full model evaluation completed")
+        print(" Full model evaluation completed")
         
         # Release GPU memory
         del full_model
         torch.cuda.empty_cache() if torch.cuda.is_available() else None
         
     except Exception as e:
-        print(f"❌ Full model evaluation failed: {e}")
+        print(f" Full model evaluation failed: {e}")
         all_results['full_model'] = {"error": str(e)}
     
     # 2. Evaluate ablation model
     print("\n" + "="*80)
-    print("🔴 Phase 2: Evaluating ablation model (without pretrained CF model)")
+    print(" Phase 2: Evaluating ablation model (without pretrained CF model)")
     print("="*80)
     
     try:
@@ -734,19 +734,19 @@ def run_ablation_evaluation(checkpoint_path, cfg, test_data_path, output_dir):
             ablation_model, task, datasets, cfg, test_data_path, model_type="ablation"
         )
         all_results['ablation_model'] = ablation_results
-        print("✅ Ablation model evaluation completed")
+        print(" Ablation model evaluation completed")
         
         # Release GPU memory
         del ablation_model
         torch.cuda.empty_cache() if torch.cuda.is_available() else None
         
     except Exception as e:
-        print(f"❌ Ablation model evaluation failed: {e}")
+        print(f" Ablation model evaluation failed: {e}")
         all_results['ablation_model'] = {"error": str(e)}
     
     # 3. Calculate comparison results
     print("\n" + "="*80)
-    print("📊 Phase 3: Computing comparison results")
+    print(" Phase 3: Computing comparison results")
     print("="*80)
     
     comparison_results = generate_comparison_results(all_results)
@@ -757,7 +757,7 @@ def run_ablation_evaluation(checkpoint_path, cfg, test_data_path, output_dir):
 
 def generate_comparison_results(all_results):
     """Generate comparison results for two models"""
-    print("🔍 Generating model comparison analysis...")
+    print(" Generating model comparison analysis...")
     
     comparison = {
         'summary': {},
