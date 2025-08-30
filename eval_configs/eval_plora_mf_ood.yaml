@@ -1,0 +1,63 @@
+model:
+  arch: mini_gpt4rec_vx
+  model_type: pretrain_vicuna
+  rec_model: "MF"  # 明确指定协同过滤模型类型
+  freeze_rec: True         # 协同过滤主体冻结
+  freeze_proj: True        # 评估时投影层冻结
+  freeze_lora: True        # 评估时LoRA层冻结
+  freeze_bias: True        # 偏置层冻结
+  enable_score_head: True  # 启用评分预测头
+  max_txt_len: 384
+  proj_token_num: 1
+  proj_drop: 0
+  proj_mid_times: 10
+  end_sym: "###"
+  prompt_path: "prompts/tallrec_amazon.txt"
+  prompt_template: '{}'
+  llama_model: "/root/autodl-tmp/vicuna/weight"
+  user_num: -100
+  item_num: -100
+  ans_type: 'v2'
+  enable_rating_prediction: True  # 启用评分预测
+  
+  lora_config:
+    use_lora: True
+    r: 16
+    alpha: 32
+    target_modules: ["q_proj", "v_proj", "o_proj", "k_proj"]
+    dropout: 0.05
+  rec_config:
+    user_num: -100
+    item_num: -100
+    embedding_size: 256
+    pretrained_path: "/root/autodl-tmp/pretrained/mf/best_model.pth"
+
+datasets:
+  amazon_ood:
+    path: /root/autodl-tmp/dataset/amazon/
+    data_type: default
+    build_info:
+      storage: /root/autodl-tmp/dataset/amazon/
+
+run:
+  task: rec_pretrain
+  mode: 'v2'
+  
+  # 评估专用配置
+  evaluate: True           # 设置为评估模式
+  batch_size_eval: 8       # 评估批次大小
+  num_workers: 2           # 数据加载worker数
+  
+  # 数据分割设置
+  train_splits: []         # 评估时不需要训练集
+  valid_splits: []         # 评估时不需要验证集  
+  test_splits: ["test"]    # 只使用测试集
+  
+  # 设备设置
+  device: "cuda"
+  distributed: False       # 评估时关闭分布式
+  world_size: 1
+  
+  # 其他设置
+  amp: True               # 使用混合精度加速推理
+  use_dist_eval_sampler: False
